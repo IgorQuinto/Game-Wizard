@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Personagens Andando e Atacando</title>
+    <style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        #cenario {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        #p1,
+        #p2 {
+            position: absolute;
+            bottom: 0;
+            left: 100px;
+        }
+
+        #magoVermelho,
+        #magoAzul {
+            width: 100px;
+            height: 100px;
+        }
+
+        .projetil {
+            position: absolute;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="imagens/CenarioTemporario.jpg" id="cenario">
+    <div id="p1">
+        <img src="imagens/Mago-vermelho-parado.gif" id="magoVermelho">
+    </div>
+    <div id="p2">
+        <img src="imagens/Mago-azul-parado.gif" id="magoAzul">
+    </div>
+
+    <script>
+        // ============================
+        // 1) ELEMENTOS DO DOM
+        // ============================
+        const magoVermelho = document.getElementById('p1');
+        const magoAzul      = document.getElementById('p2');
+    
+        // ============================
+        // 2) ESTADO DE SPRITE & DIREÇÃO
+        // ============================
+        let imagemVermelho    = 'parado-dir';
+        let ultimaDirVermelho = 'dir';
+        let imagemAzul        = 'parado-dir';
+        let ultimaDirAzul     = 'dir';
+    
+        // ============================
+        // 3) POSIÇÕES, VELOCIDADES E FÍSICA
+        // ============================
+        let posX    = 100, posY    = 100;
+        let velocidade   = 4, velocidadeY   = 0, pulando   = false;
+        let posX2   = 300, posY2   = 100;
+        let velocidade2  = 4, velocidadeY2  = 0, pulando2  = false;
+    
+        const gravidade   = 0.3;
+        const forcaDoPulo = 10;
+        const chao        = 96;
+    
+        // ============================
+        // 4) FLAGS DE TECLAS
+        // ============================
+        const teclas = {
+            KeyW: false, KeyA: false, KeyD: false,
+            ArrowUp: false, ArrowLeft: false, ArrowRight: false,
+            KeyF: false,    // ataque mago vermelho
+            KeyL: false     // ataque mago azul
+        };
+    
+        document.addEventListener('keydown', e => {
+            if (teclas.hasOwnProperty(e.code)) teclas[e.code] = true;
+        });
+        document.addEventListener('keyup', e => {
+            if (teclas.hasOwnProperty(e.code)) teclas[e.code] = false;
+        });
+    
+        // ============================
+        // 5) COOLDOWN DE ATAQUE
+        // ============================
+        const fireCooldown = 150; // ms
+        let lastFireRed  = 0;
+        let lastFireBlue = 0;
+    
+        // ============================
+        // 6) FUNÇÃO DE PROJÉTIL
+        // ============================
+        function criarProjetil(x, y, direcao, src, size) {
+            const p = document.createElement('img');
+            p.src = src;
+            p.classList.add('projetil');
+            p.style.width  = size + 'px';
+            p.style.height = size + 'px';
+            p.style.left   = x + 'px';
+            p.style.bottom = y + 'px';
+            document.body.appendChild(p);
+            const vel = 8 * direcao;
+            (function mover() {
+                x += vel;
+                p.style.left = x + 'px';
+                if (x < -size*2 || x > window.innerWidth + size*2) {
+                    p.remove();
+                    return;
+                }
+                requestAnimationFrame(mover);
+            })();
+        }
+    
+        // ============================
+        // 7) LOOP PRINCIPAL (andar)
+        // ============================
+        let ultimoTempo = 0;
+        function andar(tempoAtual = 0) {
+            // dt e limites
+            const dt = (tempoAtual - ultimoTempo) / 16;
+            ultimoTempo = tempoAtual;
+            posX  = Math.max(0, Math.min(posX,  window.innerWidth  - 100));
+            posX2 = Math.max(0, Math.min(posX2, window.innerWidth  - 100));
+    
+            // MOV & PULO - VERMELHO
+            if (teclas.KeyD) { posX += velocidade; ultimaDirVermelho='dir'; }
+            if (teclas.KeyA) { posX -= velocidade; ultimaDirVermelho='esq'; }
+            if (teclas.KeyW && !pulando) { velocidadeY = forcaDoPulo; pulando = true; }
+    
+            // MOV & PULO - AZUL
+            if (teclas.ArrowRight) { posX2 += velocidade2; ultimaDirAzul='dir'; }
+            if (teclas.ArrowLeft ) { posX2 -= velocidade2; ultimaDirAzul='esq'; }
+            if (teclas.ArrowUp   && !pulando2) { velocidadeY2 = forcaDoPulo; pulando2 = true; }
+    
+            // GRAVIDADE
+            velocidadeY  -= gravidade; posY  += velocidadeY;
+            if (posY  <= chao) { posY  = chao;  velocidadeY  = 0; pulando  = false; }
+            velocidadeY2 -= gravidade; posY2 += velocidadeY2;
+            if (posY2 <= chao) { posY2 = chao; velocidadeY2 = 0; pulando2 = false; }
+    
+            // ATAQUE c/ cooldown
+            const now = performance.now();
+            if (teclas.KeyF && now - lastFireRed  > fireCooldown) {
+                lastFireRed = now;
+                criarProjetil(posX + 50, posY + 30,
+                    ultimaDirVermelho==='esq'? -1:1,
+                    'imagens/fogo-vermelho.png',35);
+            }
+            if (teclas.KeyL && now - lastFireBlue > fireCooldown) {
+                lastFireBlue = now;
+                criarProjetil(posX2 + 50, posY2 + 30,
+                    ultimaDirAzul==='esq'? -1:1,
+                    'imagens/Pixel de gelo.gif',35);
+            }
+    
+            // SPRITE — VERMELHO
+            const movV = teclas.KeyA||teclas.KeyD;
+            let srcV = movV
+                ? (ultimaDirVermelho==='esq'
+                    ? 'imagens/Mago-vermelho-andando-esquerdo.gif'
+                    : 'imagens/Mago-vermelho-andando.gif')
+                : (ultimaDirVermelho==='esq'
+                    ? 'imagens/Mago-vermelho-parado-esquerda.gif'
+                    : 'imagens/Mago-vermelho-parado.gif');
+            if (imagemVermelho!==srcV) {
+                document.getElementById('magoVermelho').src = srcV;
+                imagemVermelho = srcV;
+            }
+    
+            // SPRITE — AZUL
+            const movA = teclas.ArrowLeft||teclas.ArrowRight;
+            let srcA = movA
+                ? (ultimaDirAzul==='esq'
+                    ? 'imagens/Mago-azul-correndo-esquerdo.gif'
+                    : 'imagens/Mago-azul-correndo.gif')
+                : (ultimaDirAzul==='esq'
+                    ? 'imagens/Mago-azul-parado-esquerdo.gif'
+                    : 'imagens/Mago-azul-parado.gif');
+            if (imagemAzul!==srcA) {
+                document.getElementById('magoAzul').src = srcA;
+                imagemAzul = srcA;
+            }
+    
+            // APLICAÇÃO
+            magoVermelho.style.left   = posX  + 'px';
+            magoVermelho.style.bottom = posY  + 'px';
+            magoAzul     .style.left   = posX2 + 'px';
+            magoAzul     .style.bottom = posY2 + 'px';
+    
+            requestAnimationFrame(andar);
+        }
+    
+        // inicie
+        requestAnimationFrame(andar);
+    </script>
+</body>
+
+</html>
