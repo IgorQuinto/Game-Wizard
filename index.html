@@ -1,19 +1,161 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <title>Personagens Andando</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        #cenario {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* para cobrir toda a tela */
+            z-index: -1;
+            /*fica atras do mago*/
+        }
+
+        #p1,
+        #p2 {
+            position: absolute;
+            bottom: 0;
+            left: 100px;
+        }
+
+        #magoVermelho,
+        #magoAzul {
+            width: 100px;
+            height: 100px;
+        }
+    </style>
 </head>
+
 <body>
-    <img src="imagens/CenarioTemporario.jpg" id="cenario">    
+    <img src="imagens/CenarioTemporario.jpg" id="cenario">
     <div id="p1">
         <img src="imagens/MagoVermelho.gif" id="magoVermelho">
     </div>
     <div id="p2">
-        <img src="imagens/MagoAzul.gif" id="magoAzul">
+        <img src="imagens/MagoAzulAndando.gif" id="magoAzul">
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const magoVermelho = document.getElementById('p1');
+        const magoAzul = document.getElementById('p2');
+
+        let imagemVermelho = 'parado';
+        let imagemAzul = 'parado';
+
+        let posX = 100, posY = 100, velocidade = 4, velocidadeY = 0, pulando = false;
+        let posX2 = 300, posY2 = 100, velocidade2 = 4, velocidadeY2 = 0, pulando2 = false;
+
+        const gravidade = 0.3;
+        const forcaDoPulo = 10;
+        const chao = 96;
+
+        const teclas = {
+            KeyW: false,
+            KeyA: false,
+            KeyD: false,
+            ArrowRight: false,
+            ArrowLeft: false,
+            ArrowUp: false,
+        };
+
+        document.addEventListener('keydown', (event) => {
+            if (teclas.hasOwnProperty(event.code)) {
+                teclas[event.code] = true;
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (teclas.hasOwnProperty(event.code)) {
+                teclas[event.code] = false;
+            }
+        });
+
+        let ultimoTempo = 0;
+        function andar(tempoAtual = 0) {
+
+            // Limita movimento horizontal (não sair pelos lados)
+            posX = Math.max(0, Math.min(posX, window.innerWidth - 100));
+            posX2 = Math.max(0, Math.min(posX2, window.innerWidth - 100));
+
+            const deltaTime = (tempoAtual - ultimoTempo) / 16;
+            ultimoTempo = tempoAtual;
+
+            // Movimento MAGO VERMELHO
+            if (teclas.KeyD) posX += velocidade;
+            if (teclas.KeyA) posX -= velocidade;
+            if (teclas.KeyW && !pulando) {
+                velocidadeY = forcaDoPulo;
+                pulando = true;
+            }
+
+            // Movimento MAGO AZUL
+            if (teclas.ArrowRight) posX2 += velocidade2;
+            if (teclas.ArrowLeft) posX2 -= velocidade2;
+            if (teclas.ArrowUp && !pulando2) {
+                velocidadeY2 = forcaDoPulo;
+                pulando2 = true;
+            }
+
+            // Estado das animações
+            const andandoVermelho = teclas.KeyA || teclas.KeyD;
+            const andandoAzul = teclas.ArrowLeft || teclas.ArrowRight;
+
+            if (!andandoVermelho && imagemVermelho !== 'parado') {
+                document.getElementById('magoVermelho').src = 'imagens/MagoVermelho.gif';
+                imagemVermelho = 'parado';
+            } else if (andandoVermelho && imagemVermelho !== 'andando') {
+                document.getElementById('magoVermelho').src = 'imagens/MagoVermelhoAndando.gif';
+                imagemVermelho = 'andando';
+            }
+
+            if (!andandoAzul && imagemAzul !== 'parado') {
+                document.getElementById('magoAzul').src = 'imagens/MagoAzul.gif';
+                imagemAzul = 'parado';
+            } else if (andandoAzul && imagemAzul !== 'andando') {
+                document.getElementById('magoAzul').src = 'imagens/MagoAzulAndando.gif';
+                imagemAzul = 'andando';
+            }
+
+            // Gravidade MAGO VERMELHO
+            velocidadeY -= gravidade;
+            posY += velocidadeY;
+            if (posY <= chao) {
+                posY = chao;
+                velocidadeY = 0;
+                pulando = false;
+            }
+
+            // Gravidade MAGO AZUL
+            velocidadeY2 -= gravidade;
+            posY2 += velocidadeY2;
+            if (posY2 <= chao) {
+                posY2 = chao;
+                velocidadeY2 = 0;
+                pulando2 = false;
+            }
+
+            magoVermelho.style.left = posX + 'px';
+            magoVermelho.style.bottom = posY + 'px';
+
+            magoAzul.style.left = posX2 + 'px';
+            magoAzul.style.bottom = posY2 + 'px';
+
+            requestAnimationFrame(andar);
+        }
+
+        andar();
+    </script>
+
 </body>
+
 </html>
